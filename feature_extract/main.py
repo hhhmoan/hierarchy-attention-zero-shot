@@ -19,6 +19,7 @@ from model import inception_model
 
 _IMAGE_ROOT_ = '../data/images/'
 _IMAGE_LIST_ = '../data/images.txt'
+_PKL_ROOT_ = '../data/pkl/'
 parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
 args = parser.parse_args()
 
@@ -39,7 +40,7 @@ def main():
 
     total_feature = extractor(extract_loader, network)
     for i in total_feature.keys():
-        pickle.dump(total_feature[i], open('./data' + i[:-3] + 'pkl', 'wb'))
+        pickle.dump(total_feature[i], open(_PKL_ROOT_ + i[:-3] + 'pkl', 'wb'))
     #pickle.dump(total_feature, open('./4_19_data/'+args.load_model+'.pkl','wb'))
 
 
