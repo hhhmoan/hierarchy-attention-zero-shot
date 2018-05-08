@@ -19,7 +19,7 @@ from model import inception_model
 
 _IMAGE_ROOT_ = '../data/images/'
 _IMAGE_LIST_ = '../data/images.txt'
-_PKL_ROOT_ = '../data/pkl/'
+_PKL_ROOT_ = '/home/data/CUB-FINE-GRAINED/inception_pkl/'
 parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
 args = parser.parse_args()
 
@@ -30,23 +30,28 @@ def main():
                                   transforms.ToTensor(),
                                   transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                      std=[0.229, 0.224, 0.225])]))
-    extract_loader = data.DataLoader(test_data,
+    extract_loader = data.DataLoader(extract_data,
                                    batch_size=32,
                                    shuffle=False,
                                    num_workers=4)
 
-    network = inception_model(num_classes)
+    network = inception_model()
     network.cuda()
 
-    total_feature = extractor(extract_loader, network)
+    extractor(extract_loader, network)
+    '''
     for i in total_feature.keys():
+        dir_path = i.split('/')[0]
+        if not os.path.exists(_PKL_ROOT_ + dir_path):
+            os.makedirs(_PKL_ROOT_ + dir_path)
         pickle.dump(total_feature[i], open(_PKL_ROOT_ + i[:-3] + 'pkl', 'wb'))
+        '''
     #pickle.dump(total_feature, open('./4_19_data/'+args.load_model+'.pkl','wb'))
 
 
-def extractor(eval_loader, model, criterion):
+def extractor(eval_loader, model):
     model.eval()
-    total_result = {}
+    #total_result = {}
     count = 0
     for i, (input, target, image_name) in enumerate(eval_loader):
         target = target.cuda()
@@ -54,14 +59,17 @@ def extractor(eval_loader, model, criterion):
         input_var = torch.autograd.Variable(input)
         target_var = torch.autograd.Variable(target)
         output = model(input_var)
-        loss_x = criterion(output[0], target_var)
         for j in range(len(image_name)):
             count += 1
             real_name = image_name[j][len(_IMAGE_ROOT_):]
-            total_result[real_name] = output[0].data.cpu().numpy()[j,:]
+            dir_path = real_name.split('/')[0]
+            if not os.path.exists(_PKL_ROOT_ + dir_path):
+                os.makedirs(_PKL_ROOT_ + dir_path)
+            pickle.dump(output[1].data.cpu().numpy()[j,:], open(_PKL_ROOT_ + real_name[:-3] + 'pkl', 'wb'))
+            #total_result[real_name] = output[1].data.cpu().numpy()[j,:]
             if count % 1000 == 0:
                 print('image_feature_extract_process: ' + str(count))
-    return total_result
+    #return total_result
 
 if __name__ == '__main__':
     main()
