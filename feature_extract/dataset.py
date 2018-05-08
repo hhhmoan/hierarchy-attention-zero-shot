@@ -7,6 +7,16 @@ import torch.utils.data as data
 import torch.nn.functional as F
 import torchvision.transforms as transforms
 
+def load_from_txt(image_list):
+	image_name_list = []
+	labels = []
+	with open(image_list, 'r') as name_list:
+		for i in name_list.readlines():
+			order, path = i.split(' ')
+			labels.append(int(path[0:3]))
+			image_name_list.append(path[:-1])
+	return image_name_list, labels
+
 class CUB_data(data.Dataset):
 	def __init__(self, image_root, image_list, img_preprocess):
 		super(fashionai_data, self).__init__()
