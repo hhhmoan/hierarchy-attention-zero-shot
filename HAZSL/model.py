@@ -2,7 +2,7 @@ import tensorflow as tf
 import utils
 from tensorflow.python import debug as tf_debug
 class Model:
-    def __init__(self, class_num=10, lr=0.001, decay_steps=1000, decay_rate=0.5, train_log_print_iter=10):
+    def __init__(self, class_num=10, lr=0.001, decay_steps=1000, decay_rate=0.9, train_log_print_iter=10):
         self.classifier = tf.estimator.Estimator(model_fn=self.build_model, model_dir='./model/', params={
             'lr': lr,
             'decay_steps': decay_steps,
@@ -66,8 +66,10 @@ class Model:
         mask = features['mask']
         s = utils.attention_vector(A, F.shape[2])
         feature = utils.attention_layer(F, s)
+        #feature = tf.reduce_mean(F, axis=1)
+        #print(feature.shape)
         match = utils.transform2knowledge(feature, K.shape[-1])
-        match = tf.tile(tf.reshape(match, [64, 1, 312]), [1, 72, 1])
+        match = tf.tile(tf.reshape(match, [-1, 1, 312]), [1, 72, 1])
         score = tf.reduce_sum(tf.multiply(match, K), axis=-1)
         logits = tf.subtract(score, tf.multiply(mask, 999))
         return logits
@@ -76,5 +78,8 @@ class Model:
     def loss(labels, logits):
         #print(labels.shape, logits.shape)
         loss = tf.losses.sparse_softmax_cross_entropy(labels, logits)
-        return loss
+        train_variable = tf.trainable_variables()
+        l2_regularizer = tf.contrib.layers.l2_regularizer(0.002)
+        l2_loss = tf.contrib.layers.apply_regularization(l2_regularizer, weights_list=train_variable)
+        return loss + l2_loss
 

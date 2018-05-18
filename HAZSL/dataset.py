@@ -1,6 +1,7 @@
 import tensorflow as tf
 import numpy as np
 import pickle
+import random
 
 
 class Dataset:
@@ -15,21 +16,34 @@ class Dataset:
 
     def _parse_function_train(self, filename, i_id):
         feature_map = pickle.load(open(filename[:-4]+'pkl')).reshape((2048, 64)).T.astype(np.float32)
-        father = self.all_data[i_id]['layer_coarse']['father']
+        if random.random() > 0.5 and 'layer_fine' in self.all_data[i_id].keys():
+            layer = 'layer_fine'
+        else:
+            layer = 'layer_coarse'
+        father = self.all_data[i_id][layer]['father']
         attention_vector = self.attention_dict[father].astype(np.float32)
         knowledge = self.knowledge_dict[father].astype(np.float32)
-        mask = 1 - self.all_data[i_id]['layer_coarse']['seen_mask'].astype(np.float32)
-        label = self.all_data[i_id]['layer_coarse']['label']
-        #print(father)
+        mask = 1 - self.all_data[i_id][layer]['seen_mask'].astype(np.float32)
+        label = self.all_data[i_id][layer]['label']
         return feature_map, attention_vector, knowledge, mask, label
 
-    def _parse_function_eval(self, filename, label):
-        feature_map = pickle.load(open(filename))['x'].reshape((2048, 64)).T
-        name = label['name']
-        attention_vector = self.attention_dict[name]
-        knowledge = np.attention_dict[name]
-        mask = 1 - label['layer_coarse']['unseen_mask']
-        label = label['layer_coarse']['label']
+    def _parse_function_eval(self, filename, i_id):
+        if filename[-1] != 'f':
+            feature_map = pickle.load(open(filename[:-4]+'pkl')).reshape((2048, 64)).T.astype(np.float32)
+            father = self.all_data[i_id]['layer_coarse']['father']
+            attention_vector = self.attention_dict[father].astype(np.float32)
+            knowledge = self.knowledge_dict[father].astype(np.float32)
+            mask = 1 - self.all_data[i_id]['layer_coarse']['unseen_mask'].astype(np.float32)
+            #mask = np.zeros(72).astype(np.float32)
+            label = self.all_data[i_id]['layer_coarse']['label']
+        else:
+            feature_map = pickle.load(open(filename[:-5]+'pkl')).reshape((2048, 64)).T.astype(np.float32)
+            father = self.all_data[i_id]['layer_fine']['father']
+            attention_vector = self.attention_dict[father].astype(np.float32)
+            knowledge = self.knowledge_dict[father].astype(np.float32)
+            mask = 1 - self.all_data[i_id]['layer_fine']['unseen_mask'].astype(np.float32)
+            #mask = np.zeros(72).astype(np.float32)
+            label = self.all_data[i_id]['layer_fine']['label']
         return feature_map, attention_vector, knowledge, mask, label
 
     @staticmethod
@@ -53,7 +67,7 @@ class Dataset:
             dataset = dataset.map(
                 lambda filename, label: tuple(tf.py_func(
                     self._parse_function_eval, [filename, label],
-                    [tf.float32, tf.float32, tf.float32, tf.float32, label.dtype])))
+                    [tf.float32, tf.float32, tf.float32, tf.float32, tf.int64])))
             dataset = dataset.batch(self.batch_size)
         dataset = dataset.map(self._resize_function)
         iterator = dataset.make_one_shot_iterator()

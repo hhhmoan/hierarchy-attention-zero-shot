@@ -128,7 +128,7 @@ def attention_layer(feature_map, x):
     """
     s = tf.expand_dims(x, 1)
     s = tf.tile(s, [1, feature_map.shape[1], 1])
-    s = tf.multiply(feature_map, s)
+    s = tf.multiply(tf.nn.l2_normalize(feature_map,2), s)
     s = tf.reduce_sum(s, axis=-1)
     attention = tf.nn.softmax(s, dim=-1)
     attention = tf.expand_dims(attention, -1)
@@ -140,3 +140,24 @@ def attention_layer(feature_map, x):
 def transform2knowledge(feature, knowledge_length):
     knowledge = tf.layers.dense(feature, knowledge_length, activation=tf.nn.relu)
     return knowledge
+
+def calc_accuracy(test_l, fine_predict, coarse_predict, all_data):
+    fine_predict = list(fine_predict)
+    coarse_predict = list(coarse_predict)
+    #print(fine_predict)
+    print(len(fine_predict))
+    assert len(fine_predict) == len(coarse_predict)
+    assert len(fine_predict) == len(test_l)
+    count = 0.0
+    fine_acc = 0.0
+    coarse_acc = 0.0
+    for i in range(len(test_l)):
+        fine_label = all_data[test_l[i]]['layer_fine']['label']
+        coarse_label = all_data[test_l[i]]['layer_coarse']['label']
+        if fine_predict[i]['class_ids'][0] == fine_label and coarse_predict[i]['class_ids'][0] == coarse_label:
+            count += 1.0
+        if fine_predict[i]['class_ids'][0] == fine_label:
+            fine_acc += 1.0
+        if coarse_predict[i]['class_ids'][0] == coarse_label:
+            coarse_acc += 1.0
+    return count / len(test_l), fine_acc / len(test_l), coarse_acc / len(test_l)
